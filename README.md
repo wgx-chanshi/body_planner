@@ -1,10 +1,10 @@
 # body_planner
 
 ## install dependencies
-1.sudo apt install ros-humble-tf2
-2.sudo apt install ros-humble-tf2-geometry-msgs
-3.sudo apt install ros-humble-grid-map
-4.sudo apt install ros-humble-rviz
+ 1.sudo apt install ros-humble-tf2
+ 2.sudo apt install ros-humble-tf2-geometry-msgs
+ 3.sudo apt install ros-humble-grid-map
+ 4.sudo apt install ros-humble-rviz
 
 ## build 
 mkdir catkin_ws
