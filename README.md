@@ -7,8 +7,6 @@
 4.sudo apt install ros-humble-rviz
 
 ## build 
-mkdir catkin_ws
-cd catkin_ws
 git clone ...
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 
