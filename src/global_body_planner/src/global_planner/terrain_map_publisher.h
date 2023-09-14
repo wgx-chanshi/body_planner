@@ -24,7 +24,7 @@ public:
       : Node("TerrainMapPublisher"),
         terrain_map_({"elevation", "dx", "dy", "dz"}) {
     map_data_source_ = "csv";
-    terrain_type_ = "slope";
+    terrain_type_ = "rough_terrain";
     map_frame_ = "map";
 
     // Setup pubs and subs

@@ -269,7 +269,7 @@ void RRTConnectClass::buildRRTConnect(FastTerrainMap &terrain, State s_start,
   cost_vector_.clear();
   cost_vector_times_.clear();
 
-  std::cout << "RRT Connect" << std::endl;
+  std::cout << "RRT Connect:" << std::endl;
 
   goal_found = false;
   PlannerClass Ta;

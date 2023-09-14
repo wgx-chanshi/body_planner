@@ -12,7 +12,11 @@ void GlobalBodyPlanner::terrainMapCallback(
   terrain_.loadDataFromGridMap(map);
 
   // Update the plan
-  callPlanner();
+  if (first_run_planner_ || target_change_) {
+    callPlanner();
+    first_run_planner_ = false;
+    target_change_ = false;
+  }
 
   publishPlan();
 }
@@ -114,9 +118,8 @@ void GlobalBodyPlanner::callPlanner() {
 
 void GlobalBodyPlanner::setStartAndGoalStates() {
   // Update any relevant planning parameters
-
-  robot_start_ = {0, 0, 0.4, 0, 0.1, 0, 0, 0};
-  robot_goal_ = {8, 0, 0.4, 0, 0, 0, 0, 0};
+  robot_start_ = {start_pos_[0], start_pos_[1], start_pos_[2], 0, 0.1, 0, 0, 0};
+  robot_goal_ = {target_pos_[0], target_pos_[1], start_pos_[2], 0, 0, 0, 0, 0};
 
   robot_start_[2] += terrain_.getGroundHeight(robot_start_[0], robot_start_[1]);
   robot_goal_[2] += terrain_.getGroundHeight(robot_goal_[0], robot_goal_[1]);
@@ -182,33 +185,11 @@ void GlobalBodyPlanner::publishPlan() {
   discrete_body_plan_pub_->publish(discrete_body_plan_msg);
 }
 
-// void GlobalBodyPlanner::waitForMap() {
-//   // Spin until terrain map message has been received and processed
-//   boost::shared_ptr<grid_map_msgs::GridMap const> shared_map;
-//   while ((shared_map == nullptr) && ros::ok()) {
-//     shared_map =
-//         ros::topic::waitForMessage<grid_map_msgs::GridMap>("/terrain_map",
-//         nh_);
-//     ros::spinOnce();
-//   }
-// }
+void GlobalBodyPlanner::rviz_target_pos_subscription_cb(
+    const geometry_msgs::msg::PoseStamped::ConstSharedPtr msg) {
+  target_pos_[0] = msg->pose.position.x;
+  target_pos_[1] = msg->pose.position.y;
+  target_pos_[2] = msg->pose.position.z;
 
-// void GlobalBodyPlanner::spin() {
-//   ros::Rate r(update_rate_);
-
-//   waitForMap();
-
-//   // Update the plan
-//   callPlanner();
-
-//   while (ros::ok()) {
-
-//     // If desired, get a new plan
-//     // updatePlan();
-
-//     // Publish the plan and sleep
-//     publishPlan();
-//     ros::spinOnce();
-//     r.sleep();
-//   }
-// }
+  target_change_ = true;
+}

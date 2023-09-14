@@ -1,6 +1,7 @@
 #ifndef GLOBAL_BODY_PLANNER_H
 #define GLOBAL_BODY_PLANNER_H
 
+#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include <nav_msgs/msg/path.hpp>
 #include <tf2/LinearMath/Quaternion.h>
@@ -30,16 +31,29 @@ using namespace planning_utils;
 class GlobalBodyPlanner : public rclcpp::Node {
 public:
   GlobalBodyPlanner() : Node("GlobalBodyPlanner") {
+    first_run_planner_ = true;
+    target_change_ = false;
     num_calls_ = 1;
     replan_time_limit_ = 1.0;
     map_frame_ = "map";
     algorithm_ = "rrt-connect";
+    target_pos_.resize(3);
+    start_pos_.resize(3);
+    start_pos_[0] = 0.0;
+    start_pos_[1] = 0.0;
+    start_pos_[2] = 0.4;
+    target_pos_[0] = start_pos_[0] + 8.0;
+    target_pos_[1] = start_pos_[1];
+    target_pos_[2] = start_pos_[2];
 
     callback_group_terrain_map_subscriber_ = this->create_callback_group(
         rclcpp::CallbackGroupType::MutuallyExclusive);
 
     auto terrain_map_opt = rclcpp::SubscriptionOptions();
     terrain_map_opt.callback_group = callback_group_terrain_map_subscriber_;
+    auto sub_target_pos_rviz_opt = rclcpp::SubscriptionOptions();
+    sub_target_pos_rviz_opt.callback_group =
+        callback_group_terrain_map_subscriber_;
 
     // Setup pubs and subs
     terrain_map_sub_ = this->create_subscription<grid_map_msgs::msg::GridMap>(
@@ -47,6 +61,13 @@ public:
         std::bind(&GlobalBodyPlanner::terrainMapCallback, this,
                   std::placeholders::_1),
         terrain_map_opt);
+
+    rviz_target_pos_subscription_ =
+        this->create_subscription<geometry_msgs::msg::PoseStamped>(
+            "/goal_pose", rclcpp::QoS(10),
+            std::bind(&GlobalBodyPlanner::rviz_target_pos_subscription_cb, this,
+                      std::placeholders::_1),
+            sub_target_pos_rviz_opt);
 
     body_plan_pub_ =
         this->create_publisher<planner_msg::msg::BodyPlan>("/body_plan", 10);
@@ -92,6 +113,9 @@ private:
   void addBodyStateToMsg(double t, State body_state,
                          planner_msg::msg::BodyPlan &body_plan_msg);
 
+  void rviz_target_pos_subscription_cb(
+      const geometry_msgs::msg::PoseStamped::ConstSharedPtr msg);
+
   /**
    * @brief Publish the current body plan
    */
@@ -100,12 +124,20 @@ private:
   /// Subscriber for terrain map messages
   rclcpp::Subscription<grid_map_msgs::msg::GridMap>::SharedPtr terrain_map_sub_;
 
+  // Subscriber for rviz target pos messages
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr
+      rviz_target_pos_subscription_;
+
   /// Publisher for body plan messages
   rclcpp::Publisher<planner_msg::msg::BodyPlan>::SharedPtr body_plan_pub_;
 
   /// Publisher for discrete states in body plan messages
   rclcpp::Publisher<planner_msg::msg::BodyPlan>::SharedPtr
       discrete_body_plan_pub_;
+
+  bool first_run_planner_;
+
+  bool target_change_;
 
   /// Number of times to call the planner
   int num_calls_;
@@ -127,6 +159,10 @@ private:
 
   /// Std vector containing the interpolated time data
   std::vector<double> t_plan_;
+
+  std::vector<double> target_pos_;
+
+  std::vector<double> start_pos_;
 
   /// Robot starting state
   State robot_start_;
