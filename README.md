@@ -10,7 +10,7 @@
 4.sudo apt install ros-humble-rviz
 
 ## build 
-git clone ...
+git clone git@github.com:wgx-chanshi/body_planner.git
 
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 
