@@ -2,6 +2,7 @@
 #define GLOBAL_BODY_PLANNER_H
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include <nav_msgs/msg/path.hpp>
 #include <tf2/LinearMath/Quaternion.h>
@@ -33,6 +34,7 @@ public:
   GlobalBodyPlanner() : Node("GlobalBodyPlanner") {
     first_run_planner_ = true;
     target_change_ = false;
+    iter_plan_ = 0;
     num_calls_ = 1;
     replan_time_limit_ = 1.0;
     map_frame_ = "map";
@@ -54,6 +56,9 @@ public:
     auto sub_target_pos_rviz_opt = rclcpp::SubscriptionOptions();
     sub_target_pos_rviz_opt.callback_group =
         callback_group_terrain_map_subscriber_;
+    auto sub_current_pos_mujoco_opt = rclcpp::SubscriptionOptions();
+    sub_current_pos_mujoco_opt.callback_group =
+        callback_group_terrain_map_subscriber_;
 
     // Setup pubs and subs
     terrain_map_sub_ = this->create_subscription<grid_map_msgs::msg::GridMap>(
@@ -62,15 +67,25 @@ public:
                   std::placeholders::_1),
         terrain_map_opt);
 
-    rviz_target_pos_subscription_ =
+    rviz_target_pos_sub_ =
         this->create_subscription<geometry_msgs::msg::PoseStamped>(
             "/goal_pose", rclcpp::QoS(10),
             std::bind(&GlobalBodyPlanner::rviz_target_pos_subscription_cb, this,
                       std::placeholders::_1),
             sub_target_pos_rviz_opt);
 
+    mujoco_current_pos_sub_ =
+        this->create_subscription<nav_msgs::msg::Odometry>(
+            "/mujoco/odometry", rclcpp::QoS(10),
+            std::bind(&GlobalBodyPlanner::mujoco_current_pos_subscription_cb,
+                      this, std::placeholders::_1),
+            sub_current_pos_mujoco_opt);
+
     body_plan_pub_ =
         this->create_publisher<planner_msg::msg::BodyPlan>("/body_plan", 10);
+
+    robot_plan_pub_ =
+        this->create_publisher<nav_msgs::msg::Odometry>("/target_pos", 10);
 
     discrete_body_plan_pub_ =
         this->create_publisher<planner_msg::msg::BodyPlan>(
@@ -116,20 +131,32 @@ private:
   void rviz_target_pos_subscription_cb(
       const geometry_msgs::msg::PoseStamped::ConstSharedPtr msg);
 
+  void mujoco_current_pos_subscription_cb(
+      const nav_msgs::msg::Odometry::ConstSharedPtr msg);
+
   /**
    * @brief Publish the current body plan
    */
   void publishPlan();
+
+  void pubForController();
 
   /// Subscriber for terrain map messages
   rclcpp::Subscription<grid_map_msgs::msg::GridMap>::SharedPtr terrain_map_sub_;
 
   // Subscriber for rviz target pos messages
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr
-      rviz_target_pos_subscription_;
+      rviz_target_pos_sub_;
+
+  // Subscriber for mujoco current pos messages
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr
+      mujoco_current_pos_sub_;
 
   /// Publisher for body plan messages
   rclcpp::Publisher<planner_msg::msg::BodyPlan>::SharedPtr body_plan_pub_;
+
+  /// Publisher for robot controller
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr robot_plan_pub_;
 
   /// Publisher for discrete states in body plan messages
   rclcpp::Publisher<planner_msg::msg::BodyPlan>::SharedPtr
@@ -188,6 +215,8 @@ private:
 
   /// Vector of number of vertices for each planning call
   std::vector<int> vertices_generated_info_;
+
+  int iter_plan_;
 };
 
 #endif // GLOBAL_BODY_PLANNER_H

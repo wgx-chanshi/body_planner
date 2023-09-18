@@ -1,29 +1,62 @@
 #include "rviz_interface.h"
 
 void RVizInterface::bodyPlanCallback(
-    const planner_msg::msg::BodyPlan::ConstSharedPtr msg) {
+    const nav_msgs::msg::Odometry::ConstSharedPtr msg) {
 
   // Initialize Path message to visualize body plan
-  nav_msgs::msg::Path body_plan_viz;
+  // nav_msgs::msg::Path body_plan_viz;
   body_plan_viz.header = msg->header;
 
   // Loop through the BodyPlan message to get the state info and add to private
   // vector
-  int length = msg->states.size();
-  for (int i = 0; i < length; i++) {
+  // int length = msg->states.size();
+  // for (int i = 0; i < length; i++) {
 
-    // Load in the pose data directly from the Odometry message
-    geometry_msgs::msg::PoseStamped pose_stamped;
-    pose_stamped.header = msg->states[i].header;
-    pose_stamped.pose = msg->states[i].pose.pose;
+  //   // Load in the pose data directly from the Odometry message
+  //   geometry_msgs::msg::PoseStamped pose_stamped;
+  //   pose_stamped.header = msg->states[i].header;
+  //   pose_stamped.pose = msg->states[i].pose.pose;
 
-    // Add to the path message
-    body_plan_viz.poses.push_back(pose_stamped);
-  }
+  //   // Add to the path message
+  //   body_plan_viz.poses.push_back(pose_stamped);
+  // }
+
+  geometry_msgs::msg::PoseStamped pose_stamped;
+  pose_stamped.header = msg->header;
+  pose_stamped.pose = msg->pose.pose;
+
+  // Add to the path message
+  body_plan_viz.poses.push_back(pose_stamped);
 
   // Publish the full path
   body_plan_viz_pub_->publish(body_plan_viz);
 }
+
+// void RVizInterface::bodyPlanCallback(
+//     const planner_msg::msg::BodyPlan::ConstSharedPtr msg) {
+
+//   // Initialize Path message to visualize body plan
+//   nav_msgs::msg::Path body_plan_viz;
+//   body_plan_viz.header = msg->header;
+
+//   // Loop through the BodyPlan message to get the state info and add to
+//   private
+//   // vector
+//   int length = msg->states.size();
+//   for (int i = 0; i < length; i++) {
+
+//     // Load in the pose data directly from the Odometry message
+//     geometry_msgs::msg::PoseStamped pose_stamped;
+//     pose_stamped.header = msg->states[i].header;
+//     pose_stamped.pose = msg->states[i].pose.pose;
+
+//     // Add to the path message
+//     body_plan_viz.poses.push_back(pose_stamped);
+//   }
+
+//   // Publish the full path
+//   body_plan_viz_pub_->publish(body_plan_viz);
+// }
 
 void RVizInterface::discreteBodyPlanCallback(
     const planner_msg::msg::BodyPlan::ConstSharedPtr msg) {

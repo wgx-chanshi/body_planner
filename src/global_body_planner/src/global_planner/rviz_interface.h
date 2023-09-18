@@ -33,8 +33,8 @@ public:
         callback_group_body_plan_subscriber_;
 
     // Setup pubs and subs
-    body_plan_sub_ = this->create_subscription<planner_msg::msg::BodyPlan>(
-        "/body_plan", rclcpp::QoS(10),
+    body_plan_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+        "/target_pos", rclcpp::QoS(10),
         std::bind(&RVizInterface::bodyPlanCallback, this,
                   std::placeholders::_1),
         body_plan_opt);
@@ -63,7 +63,7 @@ private:
    * @brief Callback function to handle new body plan data
    * @param[in] Body plan message contining interpolated output of body planner
    */
-  void bodyPlanCallback(const planner_msg::msg::BodyPlan::ConstSharedPtr msg);
+  void bodyPlanCallback(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
 
   /**
    * @brief Callback function to handle new body plan discrete state data
@@ -73,7 +73,7 @@ private:
       const planner_msg::msg::BodyPlan::ConstSharedPtr msg);
 
   /// ROS subscriber for the body plan
-  rclcpp::Subscription<planner_msg::msg::BodyPlan>::SharedPtr body_plan_sub_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr body_plan_sub_;
 
   /// ROS subscriber for the body plan
   rclcpp::Subscription<planner_msg::msg::BodyPlan>::SharedPtr
@@ -92,6 +92,8 @@ private:
 
   /// Handle for the map frame
   std::string map_frame_;
+
+  nav_msgs::msg::Path body_plan_viz;
 };
 
 #endif // RVIZ_INTERFACE_H

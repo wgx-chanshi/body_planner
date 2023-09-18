@@ -14,11 +14,14 @@ void GlobalBodyPlanner::terrainMapCallback(
   // Update the plan
   if (first_run_planner_ || target_change_) {
     callPlanner();
+    iter_plan_ = 0;
     first_run_planner_ = false;
     target_change_ = false;
   }
 
-  publishPlan();
+  // publishPlan();
+
+  pubForController();
 }
 
 void GlobalBodyPlanner::clearPlan() {
@@ -32,7 +35,7 @@ void GlobalBodyPlanner::clearPlan() {
 }
 
 void GlobalBodyPlanner::callPlanner() {
-
+  std::cout << "call planner" << std::endl;
   // Get the most recent plan parameters and clear the old solutions
   setStartAndGoalStates();
 
@@ -110,7 +113,7 @@ void GlobalBodyPlanner::callPlanner() {
   }
 
   // Interpolate to get full body plan
-  double dt = 0.05;
+  double dt = 0.0002;
   std::vector<int> interp_phase;
   getInterpPath(state_sequence_, action_sequence_, dt, body_plan_, t_plan_,
                 interp_phase);
@@ -118,8 +121,8 @@ void GlobalBodyPlanner::callPlanner() {
 
 void GlobalBodyPlanner::setStartAndGoalStates() {
   // Update any relevant planning parameters
-  robot_start_ = {start_pos_[0], start_pos_[1], start_pos_[2], 0, 0.1, 0, 0, 0};
-  robot_goal_ = {target_pos_[0], target_pos_[1], start_pos_[2], 0, 0, 0, 0, 0};
+  robot_start_ = {start_pos_[0], start_pos_[1], 0.4, 0, 0, 0, 0, 0};
+  robot_goal_ = {target_pos_[0], target_pos_[1], 0.4, 0, 0, 0, 0, 0};
 
   robot_start_[2] += terrain_.getGroundHeight(robot_start_[0], robot_start_[1]);
   robot_goal_[2] += terrain_.getGroundHeight(robot_goal_[0], robot_goal_[1]);
@@ -185,6 +188,42 @@ void GlobalBodyPlanner::publishPlan() {
   discrete_body_plan_pub_->publish(discrete_body_plan_msg);
 }
 
+void GlobalBodyPlanner::pubForController() {
+  nav_msgs::msg::Odometry state;
+  State body_state;
+
+  if (iter_plan_ < body_plan_.size() - 1) {
+    body_state = body_plan_[iter_plan_];
+    iter_plan_ = iter_plan_ + 1;
+  } else {
+    body_state = body_plan_[iter_plan_ - 1];
+  }
+
+  tf2::Quaternion quat_tf;
+  geometry_msgs::msg::Quaternion quat_msg;
+  quat_tf.setRPY(0, body_state[6], atan2(body_state[4], body_state[3]));
+  quat_msg = tf2::toMsg(quat_tf);
+
+  state.header.stamp = this->now();
+  state.header.frame_id = map_frame_;
+
+  state.pose.pose.position.x = body_state[0];
+  state.pose.pose.position.y = body_state[1];
+  state.pose.pose.position.z = body_state[2];
+  state.pose.pose.orientation = quat_msg;
+
+  state.twist.twist.linear.x = body_state[3];
+  state.twist.twist.linear.y = body_state[4];
+  state.twist.twist.linear.z = body_state[5];
+  state.twist.twist.angular.x = 0;
+  state.twist.twist.angular.y = body_state[6];
+  state.twist.twist.angular.z = 0;
+
+  // std::cout << "body plan size: " << body_plan_.size() << std::endl;
+
+  robot_plan_pub_->publish(state);
+}
+
 void GlobalBodyPlanner::rviz_target_pos_subscription_cb(
     const geometry_msgs::msg::PoseStamped::ConstSharedPtr msg) {
   target_pos_[0] = msg->pose.position.x;
@@ -192,4 +231,11 @@ void GlobalBodyPlanner::rviz_target_pos_subscription_cb(
   target_pos_[2] = msg->pose.position.z;
 
   target_change_ = true;
+}
+
+void GlobalBodyPlanner::mujoco_current_pos_subscription_cb(
+    const nav_msgs::msg::Odometry::ConstSharedPtr msg) {
+  start_pos_[0] = msg->pose.pose.position.x;
+  start_pos_[1] = msg->pose.pose.position.y;
+  start_pos_[2] = msg->pose.pose.position.z;
 }
